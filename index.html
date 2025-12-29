@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Romantic Wedding Collage Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- THEME DEFINITIONS --- */
+        :root {
+            --ui-color: #8a2341; /* Deep burgundy */
+            --ui-hover: #a83254;
+            --card-bg: #fff5f7;
+            --flower-accent: rgba(227, 66, 103, 0.35);
+            --slot-bg: #ffe4e8;
+            --border-dashed: #e3a8b4;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffdde1 0%, #ee9ca7 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Montserrat', sans-serif;
+            overflow-x: hidden; /* Prevent horizontal scroll bar due to flying hearts */
+        }
+
+        /* --- NEW: TOP RIGHT "SHOWER LOVE" BUTTON --- */
+        .shower-love-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--ui-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(138, 35, 65, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000; /* Ensure it's above everything else */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .shower-love-btn:hover {
+            background: var(--ui-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(138, 35, 65, 0.4);
+        }
+
+        /* --- NEW: HEART PARTICLES ANIMATION CSS --- */
+        .heart-particle {
+            position: fixed;
+            /* Start just below the visible screen */
+            bottom: -10vh; 
+            color: var(--ui-color);
+            font-size: 24px;
+            /* Ensure they don't interfere with clicks on the app underneath */
+            pointer-events: none; 
+            /* Highest z-index to float over everything */
+            z-index: 9999; 
+            opacity: 0;
+            /* The animation definition */
+            animation: floatUp linear forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0) rotate(0deg) scale(0.5);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 0.8;
+            }
+            100% {
+                /* Move up way past the top of the screen */
+                transform: translateY(-120vh) rotate(360deg) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        /* --- CONTROLS UI (Existing) --- */
+        .controls {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 30px;
+            border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(138, 35, 65, 0.15);
+            margin-bottom: 20px;
+            margin-top: 60px; /* Added margin top to clear the fixed button on smaller screens if needed */
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: var(--ui-color);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+            box-shadow: 0 4px 6px rgba(138, 35, 65, 0.2);
+        }
+
+        .btn:hover { background: var(--ui-hover); }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            color: var(--ui-color);
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--ui-color); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        /* --- COLLAGE STYLES (Existing) --- */
+        .collage-card {
+            width: 100%;
+            max-width: 600px;
+            background-color: var(--card-bg);
+            position: relative;
+            padding-bottom: 50px;
+            box-shadow: 0 15px 35px rgba(138, 35, 65, 0.15);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .decoration {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--flower-accent) 20%, rgba(255, 182, 193, 0.05) 70%);
+            z-index: 0;
+            pointer-events: none;
+            filter: blur(5px);
+        }
+        .dec-tl { top: -50px; left: -50px; width: 300px; height: 300px; }
+        .dec-tr { top: -50px; right: -50px; width: 250px; height: 250px; }
+        .dec-bl { bottom: 100px; left: -80px; width: 350px; height: 350px; }
+        .dec-br { bottom: 50px; right: -80px; width: 300px; height: 300px; }
+
+        /* Grid */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(14, 40px);
+            gap: 8px;
+            padding: 40px 20px 20px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .photo-slot {
+            background-color: var(--slot-bg);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s ease, border-color 0.3s, box-shadow 0.3s;
+            border-radius: 2px;
+        }
+
+        .photo-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0; left: 0;
+        }
+
+        /* EDIT MODE STYLES */
+        body.edit-mode .photo-slot {
+            cursor: pointer;
+            border: 2px dashed var(--border-dashed);
+        }
+        body.edit-mode .photo-slot:hover {
+            border-color: var(--ui-color);
+            transform: scale(1.02);
+            z-index: 10;
+        }
+        
+        /* PREVIEW MODE STYLES */
+        body.preview-mode .photo-slot {
+            cursor: default;
+            border: 3px solid #fff; 
+            box-shadow: 0 4px 8px rgba(138, 35, 65, 0.1); 
+        }
+        body.preview-mode .names, body.preview-mode .date { border: none; }
+
+        .file-input { display: none; }
+
+        /* Floating Sticker */
+        .floating-img {
+            position: absolute;
+            width: 100px;
+            cursor: move;
+            z-index: 50;
+            filter: drop-shadow(0 5px 5px rgba(138, 35, 65, 0.2));
+            transition: transform 0.2s;
+        }
+        .floating-img:hover { transform: scale(1.1); }
+        .floating-img:active { cursor: grabbing; }
+
+        /* Specific Slots */
+        .slot-center { grid-column: 5 / 9; grid-row: 5 / 10; z-index: 5; }
+        .slot-1 { grid-column: 2 / 4; grid-row: 2 / 4; }
+        .slot-2 { grid-column: 4 / 5; grid-row: 1 / 4; }
+        .slot-3 { grid-column: 1 / 4; grid-row: 4 / 7; }
+        .slot-4 { grid-column: 10 / 12; grid-row: 2 / 4; }
+        .slot-5 { grid-column: 9 / 10; grid-row: 1 / 3; }
+        .slot-6 { grid-column: 5 / 7; grid-row: 3 / 5; }
+        .slot-7 { grid-column: 7 / 9; grid-row: 3 / 5; }
+        .slot-8 { grid-column: 10 / 13; grid-row: 4 / 8; }
+        .slot-9 { grid-column: 9 / 11; grid-row: 8 / 10; }
+        .slot-10 { grid-column: 11 / 13; grid-row: 8 / 9; }
+        .slot-11 { grid-column: 1 / 3; grid-row: 7 / 8; }
+        .slot-12 { grid-column: 2 / 5; grid-row: 8 / 10; }
+        .slot-13 { grid-column: 4 / 6; grid-row: 10 / 12; }
+        .slot-14 { grid-column: 6 / 8; grid-row: 11 / 14; }
+        .slot-15 { grid-column: 8 / 10; grid-row: 10 / 12; }
+
+        /* Typography */
+        .text-section {
+            text-align: center;
+            margin-top: 30px;
+            position: relative;
+            z-index: 2;
+        }
+        .names {
+            font-family: 'Great Vibes', cursive;
+            font-size: 3.8rem;
+            color: var(--ui-color);
+            line-height: 1;
+            margin-bottom: 15px;
+            border: 1px dashed transparent;
+            text-shadow: 1px 1px 2px rgba(255, 192, 203, 0.5);
+        }
+        body.edit-mode .names:hover { border-bottom: 1px dashed var(--ui-hover); }
+        .date {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 4px;
+            color: var(--ui-color);
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+             /* Adjust button position for smaller screens */
+            .shower-love-btn { top: 10px; right: 10px; padding: 8px 16px; font-size: 0.8rem;}
+            .controls { flex-direction: column; width: 90%; gap: 10px; margin-top: 50px;}
+            .grid-container { gap: 4px; grid-template-rows: repeat(14, 25px); }
+            .names { font-size: 2.8rem; }
+            .date { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body class="edit-mode" id="mainBody">
+
+    <button class="shower-love-btn" onclick="showerLove()">
+        <span>❤</span> Shower Love
+    </button>
+
+    <div class="controls">
+        <div class="toggle-container">
+            <span>Edit</span>
+            <label class="switch">
+                <input type="checkbox" id="modeToggle" onchange="toggleMode()">
+                <span class="slider"></span>
+            </label>
+            <span>Preview Finish</span>
+        </div>
+        <button class="btn" onclick="addFloatingImage()">+ Add Sticker</button>
+    </div>
+
+    <div class="collage-card" id="collageCanvas">
+        <div class="decoration dec-tl"></div>
+        <div class="decoration dec-tr"></div>
+        <div class="decoration dec-bl"></div>
+        <div class="decoration dec-br"></div>
+
+        <div class="grid-container">
+            <div class="photo-slot slot-center" onclick="handleSlotClick(this)">
+                <img src="./src/collage images/main.jpeg" alt="img">
+                <input type="file" class="file-input" accept="image/*" onchange="previewImage(this)">
+            </div>
+            <div class="photo-slot slot-1" onclick="handleSlotClick(this)"><img src="./src/collage images/14.jpg"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-2" onclick="handleSlotClick(this)"><img src="./src/collage images/12.jpg"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-3" onclick="handleSlotClick(this)"><img src="./src/collage images/6.png"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-4" onclick="handleSlotClick(this)"><img src="./src/collage images/9.jpg"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-5" onclick="handleSlotClick(this)"><img src="./src/collage images/8.png"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-6" onclick="handleSlotClick(this)"><img src="./src/collage images/3.png"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-7" onclick="handleSlotClick(this)"><img src="./src/collage images/5.png"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-8" onclick="handleSlotClick(this)"><img src="./src/collage images/ch.jpg"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-9" onclick="handleSlotClick(this)"><img src="./src/collage images/10.jpg"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-10" onclick="handleSlotClick(this)"><img src="./src/collage images/15.jpg"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-11" onclick="handleSlotClick(this)"><img src="./src/collage images/11.jpg"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-12" onclick="handleSlotClick(this)"><img src="./src/collage images/1.png"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-13" onclick="handleSlotClick(this)"><img src="./src/collage images/4.png"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-14" onclick="handleSlotClick(this)"><img src="./src/collage images/2.png"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+            <div class="photo-slot slot-15" onclick="handleSlotClick(this)"><img src="./src/collage images/7.png"><input type="file" class="file-input" onchange="previewImage(this)"></div>
+        </div>
+
+        <div class="text-section">
+            <div class="names" contenteditable="true" spellcheck="false">Palash & Tanishka</div>
+            <div class="names" contenteditable="true" spellcheck="false">❤️</div>
+        </div>
+    </div>
+
+    <script>
+        const body = document.getElementById('mainBody');
+        const collage = document.getElementById('collageCanvas');
+
+        function showerLove() {
+            const numberOfHearts = 50; // How many hearts to spawn
+            const container = document.body;
+
+            for (let i = 0; i < numberOfHearts; i++) {
+                setTimeout(() => {
+                    createHeart(container);
+                }, i * 40); 
+            }
+        }
+
+        function createHeart(container) {
+            const heart = document.createElement('div');
+            heart.className = 'heart-particle';
+            heart.innerHTML = '❤';
+
+            heart.style.left = Math.random() * 100 + 'vw';
+
+            const size = Math.random() * 30 + 15; 
+            heart.style.fontSize = size + 'px';
+            
+            // Randomize animation duration between 3s and 5s
+            const duration = Math.random() * 2 + 3;
+            heart.style.animationDuration = duration + 's';
+
+            // Randomize delay slightly
+            heart.style.animationDelay = Math.random() * 0.5 + 's';
+
+            container.appendChild(heart);
+
+            // Cleanup: Remove the element after animation finishes
+            setTimeout(() => {
+                heart.remove();
+            }, (duration + 1) * 1000);
+        }
+
+
+        // --- EXISTING FUNCTIONALITY ---
+
+        // Toggle between Edit (Clickable) and Preview (Static)
+        function toggleMode() {
+            const toggle = document.getElementById('modeToggle');
+            if (toggle.checked) {
+                body.classList.remove('edit-mode');
+                body.classList.add('preview-mode');
+            } else {
+                body.classList.add('edit-mode');
+                body.classList.remove('preview-mode');
+            }
+        }
+
+        // Handle clicks on slots
+        function handleSlotClick(element) {
+            if (body.classList.contains('edit-mode')) {
+                const input = element.querySelector('.file-input');
+                input.click();
+            }
+        }
+
+        // Preview uploaded image
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = input.parentElement.querySelector('img');
+                    img.src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Floating Sticker Logic
+        function addFloatingImage() {
+            const imgUrl = prompt("Enter URL for a static sticker/image:", "https://purepng.com/public/uploads/large/purepng.com-red-rose-flowerrose-flowerrosered-rose-1701527096461d4cnp.png");
+            if(imgUrl) {
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                img.className = 'floating-img';
+                img.style.left = '50px'; img.style.top = '50px';
+                makeDraggable(img);
+                img.ondblclick = function() { this.remove(); };
+                collage.appendChild(img);
+            }
+        }
+
+        function makeDraggable(elmnt) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            elmnt.onmousedown = dragMouseDown;
+            function dragMouseDown(e) {
+                if (!body.classList.contains('edit-mode')) return;
+                e.preventDefault();
+                pos3 = e.clientX; pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
+                pos3 = e.clientX; pos4 = e.clientY;
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            }
+            function closeDragElement() {
+                document.onmouseup = null; document.onmousemove = null;
+            }
+        }
+    </script>
+</body>
+</html>
